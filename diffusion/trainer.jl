@@ -3,6 +3,7 @@ using Flux.Data: DataLoader
 using Zygote
 using Statistics
 using ProgressBars
+using CUDA
 using Printf
 using BSON: @save
 using Dates
@@ -23,15 +24,17 @@ function train(trainer::Trainer; save_model=true, plot=nothing)
 
     opt = ADAM(trainer.train_lr)
 
+    move_x = (typeof(trainer.diffusion_model.device([1])) <: CUDA.CuArray) != (typeof(trainer.dataloader.data) <: CUDA.CuArray)
+
+
     for epoch = 1:trainer.epochs
         losses = Vector{Float64}()
 
         iter = ProgressBar(trainer.dataloader)
         for x in iter
-            x = x |> trainer.diffusion_model.device # todo: does this hinder gpu usage?
             params = Flux.params(trainer.diffusion_model.denoise_fn)
             loss, back = Zygote.pullback(params) do
-                loss = trainer.diffusion_model(x)
+                loss = move_x ? trainer.diffusion_model(x |> trainer.diffusion_model.device) : trainer.diffusion_model(x)# todo: moving the data anywhere in the controlflow seems to create a copy slowing down the training by 50%. This is not elegant, but works
             end
             grads = back(1.0f0)
             Flux.update!(opt, params, grads)
