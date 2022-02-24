@@ -4,7 +4,6 @@ export Unet, Fake2DUnet, Fake1DUnet
 export SinusoidalPosEmb #todo: dbg exports
 using Flux
 using Flux: @functor
-using Distributions: Normal
 
 expand_dims(x,n::Int) = reshape(x,ones(Int64,n)...,size(x)...)
 
@@ -50,10 +49,10 @@ end
 ConvBlock(dim::Int, dim_out::Int, norm::Bool = true, time_emb_dim::Int = 64, mult::Int = 2) = ConvBlock(
     Chain(x -> gelu.(x), Dense(time_emb_dim, dim)),
     Conv((7, 7), dim => dim, pad = (3, 3), groups = dim),
-    Chain(norm ? BatchNormWrap(dim) : x -> x,
+    Chain(norm ? BatchNormWrap(dim) : identity,
         Conv((3, 3), dim => dim_out * mult, pad=(1, 1)), x -> gelu.(x),
         Conv((3, 3), dim_out * mult => dim_out, pad=(1, 1))),
-    dim == dim_out ? x -> x : Conv((1, 1), dim => dim_out)
+    dim == dim_out ? identity : Conv((1, 1), dim => dim_out)
     )  
 
 function (u::ConvBlock)(x, t = nothing)

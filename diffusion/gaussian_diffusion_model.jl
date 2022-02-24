@@ -1,4 +1,3 @@
-using Noise
 using Flux
 using Statistics
 using Flux.Zygote: @nograd
@@ -39,7 +38,7 @@ function discretized_gaussian_log_likelihood(x, means, log_scales)
     return log_probs
 end
 
-mutable struct GaussianDiffusionModel
+struct GaussianDiffusionModel
     num_timesteps::Int64
     data_shape
 
