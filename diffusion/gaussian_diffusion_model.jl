@@ -17,18 +17,9 @@ function make_beta_schedule(n_timestep, s = 0.008)
     return clamp.(betas, 0, 0.999)
 end
 
-normal_kl(mean1, logvar1, mean2, logvar2) = 0.5 * (-1.0 + logvar2 - logvar1 + ℯ^(logvar1 - logvar2) + ((mean1 - mean2) ^ 2) * ℯ^(-logvar2))
-
 function extract(input, t, shape)
     return reshape(input[t], (repeat([1], length(shape) - 1)..., :))
 end
-
-function noise_like(shape, noise_fn=nothing, repeat=false)
-    result = zeros(Float32, shape)
-    return add_gauss(result, 1.0, 0.0)#todo: use built in randn
-end
-
-@nograd noise_like
 
 approx_standard_normal_cdf(x) = 0.5 .* (1.0 .+ tanh.(sqrt(2.0 / pi) .* (x .+ 0.044715 .* x.^3)))
 
@@ -134,7 +125,7 @@ function p_sample(gdm::GaussianDiffusionModel, x, t, clip_denoised=true)
     model_mean, _, model_log_variance = p_mean_variance(gdm, x, t, clip_denoised)
     
     nonzero_mask = reshape(1 .- (t .== 0.0), fill(1, length(size(x))-1)..., size(x)[end])
-    noise = noise_like(size(x)) |> gdm.device
+    noise = randn(Float32,size(x)) |> gdm.device
 
     sample = model_mean + nonzero_mask .* convert(AbstractArray{Float32}, ℯ.^(0.5 .* model_log_variance)) .* noise
     return sample
@@ -142,7 +133,7 @@ end
 
 function p_sample_loop(gdm::GaussianDiffusionModel, shape)
     
-    img = noise_like(shape) |> gdm.device
+    img = randn(Float32, shape) |> gdm.device
     iter = ProgressBar(gdm.num_timesteps:-1:1)
     set_description(iter, "Sampling...")
     for i in iter
@@ -174,7 +165,7 @@ end
 
 function q_sample(gdm::GaussianDiffusionModel, x_start, t, noise=nothing)
     if isnothing(noise)
-        noise = noise_like(size(x_start)) |> gdm.device
+        noise = randn(Float32, size(x_start)) |> gdm.device
     end
 
     return extract(gdm.sqrt_alphas_cumprod, t, size(x_start)) .* x_start .+ #todo: remove all unecessary broadcasting operators
@@ -184,7 +175,7 @@ end
 function p_lossess(gdm::GaussianDiffusionModel, x_start, t, noise=nothing)
 
     if isnothing(noise)
-        noise = noise_like(size(x_start)) |> gdm.device
+        noise = randn(Float32,size(x_start)) |> gdm.device
     end
 
     x_noisy = q_sample(gdm, x_start, t, noise)

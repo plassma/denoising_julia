@@ -42,4 +42,4 @@ train_x = 2f0 * reshape(train_x, 784, :) .- 1f0 |> device
 train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
 
 trainer = Trainer(diffusion, train_loader, 1e-3, 100)
-train(trainer, plot_samples)
+train(trainer; plot=plot_samples)

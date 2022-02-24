@@ -16,7 +16,7 @@ struct Trainer
     epochs#::Int64
 end
 
-function train(trainer::Trainer, plot=nothing)
+function train(trainer::Trainer; save_model=true, plot=nothing)
 
     save_path = "results/$(DateTime(now()))/"
     mkpath(save_path)
@@ -28,6 +28,7 @@ function train(trainer::Trainer, plot=nothing)
 
         iter = ProgressBar(trainer.dataloader)
         for x in iter
+            x = x |> trainer.diffusion_model.device # todo: does this hinder gpu usage?
             params = Flux.params(trainer.diffusion_model.denoise_fn)
             loss, back = Zygote.pullback(params) do
                 loss = trainer.diffusion_model(x)
@@ -44,10 +45,11 @@ function train(trainer::Trainer, plot=nothing)
             plot(epoch_samples |> cpu)
         end
         
-        model = trainer.diffusion_model.denoise_fn |> cpu
-        path = save_path * "denoising_model_" * string(@sprintf("%04d", epoch)) * ".bson"
-        @save path model
-
+        if save_model
+            model = trainer.diffusion_model.denoise_fn |> cpu
+            path = save_path * "denoising_model_" * string(@sprintf("%04d", epoch)) * ".bson"
+            @save path model
+        end
         println("Epoch $epoch/$(trainer.epochs),  loss: $(mean(losses))")
     end
 end
