@@ -11,29 +11,13 @@ using Random
 
 
 timesteps = 1000
-device = cpu
+device = gpu
 
-reorder(x) = reshape(x, (32, 512, :))
-
-struct DumbDiffusionConfusor
-    model
-    time_emb
-end
-
-
-function (m::DumbDiffusionConfusor)(x, t)
-    t = m.time_emb(t)
-
-    return m.model(x + t)
-end
-
-model = DumbDiffusionConfusor(Chain(flatten, Dense(512 * 32, 512 * 32, relu), Dense(512 * 32, 512 * 32), reorder),
-                    Chain(SinusoidalPosEmb(128), Dense(128, 512 * 32, gelu), reorder) )|> device
+model = DenseDDPM(512) |> device
 
 x = randn(Float32, 32, 512, 1)
 
 y = model(x, [0])
-
 
 betas = make_beta_schedule(timesteps) |> device
 diffusion = GaussianDiffusionModel(model, betas, timesteps, (32, 512), device)
