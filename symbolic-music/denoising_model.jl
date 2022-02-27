@@ -64,7 +64,8 @@ Dense2D(in, out, σ=identity) = Dense2D(Dense(in, out, σ))
 
 function (self::Dense2D)(x)
     d1, d2, B = size(x)#32, 512, batch_size
-    result = self.dense(reshape(x, d2, d1 * B))
+    x = reshape(x, d2, d1 * B)
+    result = self.dense(x)
     return reshape(result, d1, :, B)
 end
 
@@ -87,6 +88,8 @@ struct DenseDDPM
     chain::Chain
     num_layers::Int64
 end
+
+@functor DenseDDPM
 
 function DenseDDPM(in_dims, num_layers=3, mlp_dims=2048, channels=32)
     layers = []

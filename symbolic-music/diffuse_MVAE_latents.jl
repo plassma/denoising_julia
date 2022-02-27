@@ -15,14 +15,10 @@ device = gpu
 
 model = DenseDDPM(512) |> device
 
-x = randn(Float32, 32, 512, 1)
-
-y = model(x, [0])
-
 betas = make_beta_schedule(timesteps) |> device
 diffusion = GaussianDiffusionModel(model, betas, timesteps, (32, 512), device)
 
-train_x, eval_set = get_dataset(;limit=1000)
+train_x, eval_set = get_dataset()
 
 train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
 
