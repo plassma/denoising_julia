@@ -25,7 +25,7 @@ end
 
 @functor DenseFiLM
 
-DenseFiLM(dim, out_dim) = DenseFiLM(Chain(SinusoidalPosEmb(dim, 5000f0), Dense(dim, dim * 4, swish), Dense(dim * 4, dim * 4, swish)), Dense(dim * 4, out_dim), Dense(dim * 4, out_dim))
+DenseFiLM(dim, out_dim) = DenseFiLM(Chain(SinusoidalPosEmb(dim), Dense(dim, dim * 4, swish), Dense(dim * 4, dim * 4, swish)), Dense(dim * 4, out_dim), Dense(dim * 4, out_dim))
 
 function (df::DenseFiLM)(t)
     t = df.chain(t)

@@ -17,7 +17,7 @@ device = gpu
 model = DenseDDPM(512) |> device
 
 println("Model params: $(count_params(model))")
-betas = make_beta_schedule(timesteps) |> device
+betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
 diffusion = GaussianDiffusionModel(model, betas, timesteps, (32, 512), device)
 
 train_x, eval_set = get_dataset(;limit=10000)
