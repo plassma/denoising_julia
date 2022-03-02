@@ -1,20 +1,19 @@
 using TFRecord
+using Flux: batch
 include("../utils.jl")
 
 searchdir(path,key) = filter(x->contains(x,key), readdir(path))
 
-function to_vector(X, data_shape, limit=nothing)
+function to_vector(X, limit=nothing)
     result = Matrix{Float32}[]
     for (i, x) in enumerate(X)
-        reshaped = reshape(x.features.feature["inputs"].float_list.value, data_shape)
+        reshaped = reshape(x.features.feature["inputs"].float_list.value, (512, 32))
         push!(result, reshaped)
         if !isnothing(limit) && i >= limit
             break
         end
     end
-    result = reduce((x,y) -> cat(x, y, dims=3), result)
-    result = reshape(result, (data_shape..., :))
-    return permutedims(result, [2, 1, 3])
+    permutedims(batch(result), [2, 1, 3])
 end
 
 function normalize!(x)
@@ -27,17 +26,17 @@ function normalize!(x)
     x .-= 1
 end
 
-function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/", data_shape=(32, 512); normalize=true, limit=nothing)
+#"/home/plassma/PycharmProjects/symbolic-music-diffusion/preprocessed_clean_encoded/"
+function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/"; normalize=true, limit=nothing)
     train_ds = TFRecord.read(path .* searchdir(path, "train"))
-    eval_ds = TFRecord.read(path .* searchdir(path, "eval"))
-    data_shape = reverse(data_shape)
-    train_x = to_vector(train_ds, data_shape, limit)
-    eval_x = to_vector(eval_ds, data_shape, limit)
+    test_ds = TFRecord.read(path .* searchdir(path, "eval"))
+    train_x = to_vector(train_ds, limit)
+    test_x = to_vector(test_ds, limit)
     
     if normalize
         normalize!(train_x)
-        normalize!(eval_x)
+        normalize!(test_x)
     end
-
-    return train_x, eval_x
+    println("Loaded data. |train| = $(size(train_x)[end]), |test| = $(size(test_x)[end])")
+    train_x, test_x
 end
