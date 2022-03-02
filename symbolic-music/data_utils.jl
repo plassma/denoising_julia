@@ -8,16 +8,16 @@ function to_vector(X, data_shape, limit=nothing)
     for (i, x) in enumerate(X)
         reshaped = reshape(x.features.feature["inputs"].float_list.value, data_shape)
         push!(result, reshaped)
-        
-        if !isnothing(limit) && i > limit
+        if !isnothing(limit) && i >= limit
             break
         end
     end
-    return reshape(vcat(result...), (data_shape..., :))
+    result = reduce((x,y) -> cat(x, y, dims=3), result)
+    result = reshape(result, (data_shape..., :))
+    return permutedims(result, [2, 1, 3])
 end
 
 function normalize!(x)
-
     x_max = maximum(x)
     x_min = minimum(x)
 
@@ -27,10 +27,10 @@ function normalize!(x)
     x .-= 1
 end
 
-function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/", data_shape=(32, 512), normalize=true; limit=nothing)
+function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/", data_shape=(32, 512); normalize=true, limit=nothing)
     train_ds = TFRecord.read(path .* searchdir(path, "train"))
     eval_ds = TFRecord.read(path .* searchdir(path, "eval"))
-
+    data_shape = reverse(data_shape)
     train_x = to_vector(train_ds, data_shape, limit)
     eval_x = to_vector(eval_ds, data_shape, limit)
     

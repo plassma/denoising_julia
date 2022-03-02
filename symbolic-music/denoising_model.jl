@@ -13,7 +13,8 @@ SinusoidalPosEmb(dim::Int64, scale::Float32=1f0) = dim % 2 == 0 ? SinusoidalPosE
 
 function (s::SinusoidalPosEmb)(x)
     emb = x' .* s.emb .* s.scale
-    return cat(sin.(emb), cos.(emb), dims = 1)
+    result = cat(sin.(emb), cos.(emb), dims = 1)
+    return result
 end
 
 struct DenseFiLM
@@ -64,10 +65,19 @@ Dense2D(in, out, σ=identity) = Dense2D(Dense(in, out, σ))
 
 function (self::Dense2D)(x)
     d1, d2, B = size(x)#32, 512, batch_size
+    x = permutedims(x, [2, 1, 3])#todo: needed?
     x = reshape(x, d2, d1 * B)
     result = self.dense(x)
-    return reshape(result, d1, :, B)
+    result = reshape(result, :, d1, B)#todo: is this reshaping needed?
+    return permutedims(result, [2, 1, 3])
 end
+
+#function (self::Dense2D)(x)
+#    d1, d2, B = size(x) #32, 512, batch_size
+#    x = reshape(x, d2, d1 * B)
+#    result = self.dense(x)
+#    return reshape(result, d1, :, B)
+#end
 
 struct NDBatchNorm
     batch_norm::BatchNorm
