@@ -1,6 +1,8 @@
 using Flux: @functor
 using Flux
 using CUDA
+using OMEinsum, SymEngine
+include("../utils.jl") #todo: remove again dbg
 
 struct SinusoidalPosEmb #todo: move this to common
     emb::AbstractArray{Float32}
@@ -126,3 +128,108 @@ function (self::DenseDDPM)(x, t)
     x = self.chain[end](x)
     return x
 end
+
+struct SelfAttention
+    scale::Float32
+    heads::Int64
+    qkv::Tuple
+    out::Conv
+end
+
+@functor SelfAttention
+
+function SelfAttention(dim, heads=4, dim_head=dim)#todo: adjust default params
+    scale = dim_head ^ -0.5
+    hidden_dim = dim_head * heads
+    SelfAttention(scale, heads, Tuple(Conv((1, 1), dim => hidden_dim; bias=false) for i = 1:3), Conv((1, 1), hidden_dim => dim))
+end
+
+function (self::SelfAttention)(x)
+    shape = size(x)
+    if length(shape) == 3
+        x = reshape(x, 1, shape...)
+    end
+    w, h, c, B = size(x)
+
+    q, k, v = (reshape(self.qkv[i](x), w * h, :, self.heads, B) .* self.scale for i = 1:3)
+
+    k = softmax(k, dims=1)
+    
+    context = ein"n d h b, n e h b -> e d h b"(k, v)
+
+    out = ein"e d h b, n d h b -> n e h b"(context, q)
+    out = reshape(out, w, h, :, B)
+
+    return reshape(self.out(out), shape...)
+end
+
+struct TransformerDDPM
+    layers::Chain
+    pos_emb::AbstractArray
+    num_attention_layers::Int64
+    num_mlp_layers::Int64
+end
+
+@functor TransformerDDPM
+
+function TransformerDDPM(dim=512, heads=8, attention_layers=6, mlp_layers=2, mlp_dims=2048, channels=32, emb_dim=128)
+    pos_emb = copy(reshape(SinusoidalPosEmb(emb_dim)(1:channels)', channels, emb_dim, 1))
+    layers = []
+    push!(layers, Dense2D(dim, emb_dim))
+
+    for i = 1:attention_layers
+        push!(layers, NDBatchNorm(emb_dim * channels))
+        push!(layers, SelfAttention(emb_dim, heads))
+        push!(layers, NDBatchNorm(emb_dim * channels))
+        push!(layers, Dense2D(emb_dim, mlp_dims, gelu))
+        push!(layers, Dense2D(mlp_dims, emb_dim, gelu))
+    end
+
+    push!(layers, NDBatchNorm(emb_dim * channels))
+    push!(layers, Dense2D(emb_dim, mlp_dims))
+
+    for i = 1:mlp_layers
+        push!(layers, DenseFiLM(emb_dim, mlp_dims))
+        push!(layers, DenseResBlock(mlp_dims, mlp_dims, channels))
+    end
+
+    push!(layers, NDBatchNorm(mlp_dims * channels))
+    push!(layers, Dense2D(mlp_dims, dim))
+    TransformerDDPM(Chain(layers...), pos_emb, attention_layers, mlp_layers)
+end
+
+function (self::TransformerDDPM)(x, t)
+    i = 0
+    x = self.layers[i+=1](x) #.+ self.pos_emb
+
+    for _ = 1:self.num_attention_layers
+        shortcut = x
+        x = self.layers[(i+=1):(i+=1)](x)
+        x += shortcut
+        shortcut = x
+        x = self.layers[(i+=1):(i+=2)](x)
+        x += shortcut
+    end
+    x = self.layers[(i+=1):(i+=1)](x)
+
+    for _ = 1:self.num_mlp_layers
+        scale, shift = self.layers[i+=1](t)
+        x = self.layers[i+=1](x, scale, shift)
+    end
+
+    self.layers[end - 1:end](x)
+end
+
+#todo: remove dbg
+#att = SelfAttention(64, 4, 32) |> gpu
+#whcb
+#att(ones(32, 64, 64) |> gpu)
+
+#todo: remove dbg
+
+#ddpm = TransformerDDPM() |> gpu
+#x = ones(32, 512, 21) |> gpu
+#t = ones(21) |> gpu
+#dbg_dump_var(x, "x")
+#y = ddpm(x, t)
+#dbg_dump_var(y, "y")

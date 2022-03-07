@@ -69,7 +69,6 @@ end
 Upsample(dim) = ConvTranspose((4, 4), dim => dim, stride=(2, 2), pad=(1, 1))
 Downsample(dim) = Conv((4, 4), dim => dim, stride=(2, 2), pad=(1, 1))
 
-
 struct Unet
     down_blocks
     conv_blocks

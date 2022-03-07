@@ -1,6 +1,5 @@
 using Flux
 using Statistics
-using Flux.Zygote: @nograd
 using ProgressBars
 
 function dbg_dump_var(var, name)

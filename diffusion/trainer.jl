@@ -26,7 +26,6 @@ function train(trainer::Trainer; save_model=true, plot=nothing)
 
     move_x = (typeof(trainer.diffusion_model.device([1])) <: CUDA.CuArray) != (typeof(trainer.dataloader.data) <: CUDA.CuArray)
 
-
     for epoch = 1:trainer.epochs
         losses = Vector{Float64}()
 
@@ -49,8 +48,8 @@ function train(trainer::Trainer; save_model=true, plot=nothing)
         end
         
         if save_model
-            model = trainer.diffusion_model.denoise_fn |> cpu
-            path = save_path * "denoising_model_" * string(@sprintf("%04d", epoch)) * ".bson"
+            model = trainer.diffusion_model |> cpu
+            path = save_path * "diffusion_model_" * string(@sprintf("%04d", epoch)) * ".bson"
             @save path model
         end
         println("Epoch $epoch/$(trainer.epochs),  loss: $(mean(losses))")
