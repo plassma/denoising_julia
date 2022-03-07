@@ -63,7 +63,7 @@ end
 
 @functor Dense2D
 
-Dense2D(in, out, σ=identity) = Dense2D(Dense(in, out, σ))
+Dense2D(in, out, σ=identity; bias=true) = Dense2D(Dense(in, out, σ; bias = bias))
 
 function (self::Dense2D)(x)
     d1, d2, B = size(x)#32, 512, batch_size
@@ -133,34 +133,30 @@ struct SelfAttention
     scale::Float32
     heads::Int64
     qkv::Tuple
-    out::Conv
+    out::Dense2D
 end
 
 @functor SelfAttention
 
-function SelfAttention(dim, heads=4, dim_head=dim)#todo: adjust default params
+function SelfAttention(dim, heads=8, dim_head=dim ÷ heads)
     scale = dim_head ^ -0.5
     hidden_dim = dim_head * heads
-    SelfAttention(scale, heads, Tuple(Conv((1, 1), dim => hidden_dim; bias=false) for i = 1:3), Conv((1, 1), hidden_dim => dim))
+    SelfAttention(scale, heads, Tuple(Dense2D(dim, hidden_dim; bias=false) for i = 1:3), Dense2D(hidden_dim, dim))
 end
 
 function (self::SelfAttention)(x)
-    shape = size(x)
-    if length(shape) == 3
-        x = reshape(x, 1, shape...)
-    end
-    w, h, c, B = size(x)
+    n, _, B = size(x)
 
-    q, k, v = (reshape(self.qkv[i](x), w * h, :, self.heads, B) .* self.scale for i = 1:3)
+    q, k, v = (reshape(self.qkv[i](x), n, :, self.heads, B) .* self.scale for i = 1:3)
 
     k = softmax(k, dims=1)
     
     context = ein"n d h b, n e h b -> e d h b"(k, v)
 
     out = ein"e d h b, n d h b -> n e h b"(context, q)
-    out = reshape(out, w, h, :, B)
+    out = reshape(out, n, :, B)
 
-    return reshape(self.out(out), shape...)
+    return self.out(out)
 end
 
 struct TransformerDDPM
@@ -172,7 +168,7 @@ end
 
 @functor TransformerDDPM
 
-function TransformerDDPM(dim=512, heads=8, attention_layers=6, mlp_layers=2, mlp_dims=2048, channels=32, emb_dim=128)
+function TransformerDDPM(dim=512, heads=8, attention_layers=6, mlp_layers=2, mlp_dims=2048, channels=32, emb_dim=dim)
     pos_emb = copy(reshape(SinusoidalPosEmb(emb_dim)(1:channels)', channels, emb_dim, 1))
     layers = []
     push!(layers, Dense2D(dim, emb_dim))
@@ -200,7 +196,7 @@ end
 
 function (self::TransformerDDPM)(x, t)
     i = 0
-    x = self.layers[i+=1](x) #.+ self.pos_emb
+    x = self.layers[i+=1](x) .+ self.pos_emb
 
     for _ = 1:self.num_attention_layers
         shortcut = x
@@ -224,6 +220,11 @@ end
 #att = SelfAttention(64, 4, 32) |> gpu
 #whcb
 #att(ones(32, 64, 64) |> gpu)
+
+#att = SelfAttention(512, 8, 128) |> gpu
+#att(ones(32, 512, 64) |> gpu)
+
+#println("model_params: ", count_params(att))
 
 #todo: remove dbg
 
