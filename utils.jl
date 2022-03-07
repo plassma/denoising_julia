@@ -13,3 +13,9 @@ function showall(x, io=stdout, limit = false)
     Base.print_matrix(IOContext(io, :limit => limit), x)
     println()
   end
+
+function count_params_per_layer(model::Chain)
+    for l in model
+        println("$(typeof(l)): $(sum(length, params(l)))")
+    end
+end

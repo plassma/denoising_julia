@@ -44,7 +44,7 @@ end
 
 @functor DenseResBlock
 
-DenseResBlock(in_dim::Int64, out_dim::Int64, channels::Int64) = DenseResBlock(Chain(NDBatchNorm(in_dim * channels), Dense2D(in_dim, out_dim), NDBatchNorm(out_dim * channels), Dense2D(out_dim, out_dim)), in_dim == out_dim ? identity : Dense2D(in_dim, out_dim))
+DenseResBlock(in_dim::Int64, out_dim::Int64, channels::Int64) = DenseResBlock(Chain(NDBatchNorm(in_dim), Dense2D(in_dim, out_dim), NDBatchNorm(out_dim), Dense2D(out_dim, out_dim)), in_dim == out_dim ? identity : Dense2D(in_dim, out_dim))
 
 function (self::DenseResBlock)(in, scale, shift)
     x = self.chain[1](in)
@@ -91,7 +91,7 @@ NDBatchNorm(dim) = NDBatchNorm(BatchNorm(dim))
 
 function (self::NDBatchNorm)(x)
     shape = size(x)
-    x = reshape(x, :, shape[end])
+    x = reshape(x, self.batch_norm.chs, :)
     x = self.batch_norm(x)
     return reshape(x, shape)
 end
@@ -112,7 +112,7 @@ function DenseDDPM(in_dims, num_layers=3, mlp_dims=2048, channels=32)
         push!(layers, DenseResBlock(mlp_dims, mlp_dims, channels))
     end
 
-    push!(layers, NDBatchNorm(mlp_dims * channels))
+    push!(layers, NDBatchNorm(mlp_dims))
     push!(layers, Dense2D(mlp_dims, in_dims))
     DenseDDPM(Chain(layers...), num_layers)
 end
@@ -174,22 +174,22 @@ function TransformerDDPM(dim=512, heads=8, attention_layers=6, mlp_layers=2, mlp
     push!(layers, Dense2D(dim, emb_dim))
 
     for i = 1:attention_layers
-        push!(layers, NDBatchNorm(emb_dim * channels))
+        push!(layers, NDBatchNorm(emb_dim))
         push!(layers, SelfAttention(emb_dim, heads))
-        push!(layers, NDBatchNorm(emb_dim * channels))
+        push!(layers, NDBatchNorm(emb_dim))
         push!(layers, Dense2D(emb_dim, mlp_dims, gelu))
         push!(layers, Dense2D(mlp_dims, emb_dim, gelu))
     end
 
-    push!(layers, NDBatchNorm(emb_dim * channels))
+    push!(layers, NDBatchNorm(emb_dim))
     push!(layers, Dense2D(emb_dim, mlp_dims))
 
     for i = 1:mlp_layers
-        push!(layers, DenseFiLM(emb_dim, mlp_dims))
+        push!(layers, DenseFiLM(128, mlp_dims))
         push!(layers, DenseResBlock(mlp_dims, mlp_dims, channels))
     end
 
-    push!(layers, NDBatchNorm(mlp_dims * channels))
+    push!(layers, NDBatchNorm(mlp_dims))
     push!(layers, Dense2D(mlp_dims, dim))
     TransformerDDPM(Chain(layers...), pos_emb, attention_layers, mlp_layers)
 end
