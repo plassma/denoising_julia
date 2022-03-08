@@ -66,20 +66,11 @@ end
 Dense2D(in, out, σ=identity; bias=true) = Dense2D(Dense(in, out, σ; bias = bias))
 
 function (self::Dense2D)(x)
-    d1, d2, B = size(x)#32, 512, batch_size
-    x = permutedims(x, [2, 1, 3])#todo: needed?
+    d1, d2, B = size(x) #32, 512, batch_size
     x = reshape(x, d2, d1 * B)
     result = self.dense(x)
-    result = reshape(result, :, d1, B)#todo: is this reshaping needed?
-    return permutedims(result, [2, 1, 3])
+    return reshape(result, d1, :, B)
 end
-
-#function (self::Dense2D)(x)
-#    d1, d2, B = size(x) #32, 512, batch_size
-#    x = reshape(x, d2, d1 * B)
-#    result = self.dense(x)
-#    return reshape(result, d1, :, B)
-#end
 
 struct NDBatchNorm
     batch_norm::BatchNorm

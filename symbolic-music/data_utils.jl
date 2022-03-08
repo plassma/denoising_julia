@@ -26,7 +26,6 @@ function normalize!(x)
     x .-= 1
 end
 
-#"/home/plassma/PycharmProjects/symbolic-music-diffusion/preprocessed_clean_encoded/"
 function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/"; normalize=true, limit=nothing)
     train_ds = TFRecord.read(path .* searchdir(path, "train"))
     test_ds = TFRecord.read(path .* searchdir(path, "eval"))

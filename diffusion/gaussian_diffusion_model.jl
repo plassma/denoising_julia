@@ -1,6 +1,7 @@
 using Flux
 using Statistics
 using ProgressBars
+using Flux: @functor
 
 function dbg_dump_var(var, name)
     println("$name: ($(typeof(var))) [$(size(var))]")
@@ -62,6 +63,8 @@ struct GaussianDiffusionModel
     GaussianDiffusionModel(args...) = new(args...)
 
 end
+
+@functor GaussianDiffusionModel
 
 function gaussian_diffusion_model(model, betas, num_timesteps, data_shape, device)
     alphas = 1 .- betas
