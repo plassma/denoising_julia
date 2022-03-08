@@ -1,5 +1,6 @@
 using Flux
 using Flux.Data: DataLoader
+using Flux.Optimise
 using Zygote
 using Statistics
 using ProgressBars
@@ -12,7 +13,7 @@ using Dates
 struct Trainer
     diffusion_model#::GaussianDiffusionModel
     dataloader#::DataLoader
-
+    
     train_lr#::Float64
     epochs#::Int64
 end
@@ -22,7 +23,7 @@ function train(trainer::Trainer; save_model=true, plot=nothing)
     save_path = "results/$(DateTime(now()))/"
     mkpath(save_path)
 
-    opt = ADAM(trainer.train_lr)
+    opt = Optimiser(ADAM(trainer.train_lr), ClipValue(1e-2))
 
     move_x = (typeof(trainer.diffusion_model.device([1])) <: CUDA.CuArray) != (typeof(trainer.dataloader.data) <: CUDA.CuArray)
 
