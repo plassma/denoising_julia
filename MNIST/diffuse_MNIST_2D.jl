@@ -8,25 +8,26 @@ using .DiffusionModels
 using .UNet
 using Plots
 using Random
+using Images
 
 pyplot()
 Plots.PyPlotBackend()
 
-function plot_samples(samples)
-    samples = reshape(samples, 28, 28, size(samples)[2:end]...)
-
+global epoch = 1
+function save_samples(samples)
+    samples = (reshape(samples, 28, 28, size(samples)[end]) .+ 1) ./ 2
     a = zeros(28*4, 28*4)
 
     for i = 1:(size(samples)[end])
         for j = 1:28
             for k = 1:28
-                a[((i - 1) ÷ 4) * 28 + k, ((i - 1) % 4) * 28 + j] = samples[j, k, 1, i]
+                a[((i - 1) ÷ 4) * 28 + k, ((i - 1) % 4) * 28 + j] = samples[j, k, i]
             end
         end
     end
 
-    p = heatmap(a, c = :greys)
-    display(p)
+    save("$epoch.png", colorview(Gray, a))
+    global epoch += 1
 end
 
 timesteps = 1000
@@ -37,9 +38,13 @@ unet = Fake2DUnet(28) |> device
 betas = make_beta_schedule(timesteps) |> device
 diffusion = GaussianDiffusionModel(unet, betas, timesteps, (28*28, 1), device)
 
-train_x, _ = MNIST.traindata(Float32);
+train_x, _ = MNIST.traindata(Float32)
+test_x, _ = MNIST.testdata(Float32)
 train_x = 2f0 * reshape(train_x, 784, 1, :) .- 1f0 |> device
+test_x = 2f0 * reshape(test_x, 784, 1, :) .- 1f0 |> device
 train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
+test_loader = DataLoader(test_x, batchsize=32, shuffle=true)
 
-trainer = Trainer(diffusion, train_loader, 1e-3, 100)
-train(trainer; plot=plot_samples)
+
+trainer = Trainer(diffusion, train_loader, 1e-3, 100, test_loader)
+train!(trainer; handle_samples=save_samples)

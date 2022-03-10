@@ -12,17 +12,15 @@ device = gpu
 num_samples = remaining = 100
 batch_size = 64
 
-@load "results/dense_ddpm_diffusion_model.bson" gdm
-
-gdm = GaussianDiffusionModel(gdm.denoise_fn |> device, gdm.betas |> device, gdm.num_timesteps, gdm.data_shape , device)
-
-samples = Array{Float32, 3}(undef, gdm.data_shape..., num_samples)
+@load "results/diffusion_model_0034.bson" model
+model = model |> device
+samples = Array{Float32, 3}(undef, model.data_shape..., num_samples)
 
 while remaining > 0
     if batch_size > remaining
         global batch_size = remaining
     end
-    new_samples = sample(gdm, batch_size) |> cpu
+    new_samples = sample(model, batch_size) |> cpu
     
     sampled = num_samples - remaining
     samples[:, :, sampled + 1:sampled + batch_size] = new_samples
@@ -33,4 +31,4 @@ end
 
 path = "sampled/$(DateTime(now()))"
 mkpath(path)
-npzwrite("samples.npz", samples)
+npzwrite("$path/samples.npz", samples)

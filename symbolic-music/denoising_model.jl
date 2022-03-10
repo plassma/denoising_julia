@@ -2,22 +2,34 @@ using Flux: @functor
 using Flux
 using CUDA
 using OMEinsum, SymEngine
-include("../utils.jl") #todo: remove again dbg
-
-struct SinusoidalPosEmb #todo: move this to common
+include("../nn_common.jl")
+#=struct SinusoidalPosEmb #todo: move this to common
     emb::AbstractArray{Float32}
-    scale::Float32
 end
 
 @functor SinusoidalPosEmb
 
-SinusoidalPosEmb(dim::Int64, scale::Float32=1f0) = dim % 2 == 0 ? SinusoidalPosEmb(ℯ .^ ((0:(dim÷2-1)) * -(log(10000) / (dim ÷ 2 - 1))), scale) : AssertionError("dim must be even")
+SinusoidalPosEmb(dim::Int64) = dim % 2 == 0 ? SinusoidalPosEmb(ℯ .^ ((0:(dim÷2-1)) * -(log(10000) / (dim ÷ 2 - 1)))) : AssertionError("dim must be even")
 
 function (s::SinusoidalPosEmb)(x)
-    emb = x' .* s.emb .* s.scale
-    result = cat(sin.(emb), cos.(emb), dims = 1)
-    return result
+    emb = x' .* s.emb
+    return cat(sin.(emb), cos.(emb), dims = 1)
 end
+
+struct Dense2D
+    dense::Dense
+end
+
+@functor Dense2D
+
+Dense2D(in, out, σ=identity; bias=true) = Dense2D(Dense(in, out, σ; bias = bias))
+
+function (self::Dense2D)(x)
+    d1, d2, B = size(x) #32, 512, batch_size
+    x = reshape(x, d2, d1 * B)
+    result = self.dense(x)
+    return reshape(result, d1, :, B)
+end=#
 
 struct DenseFiLM
     chain::Chain
@@ -55,21 +67,6 @@ function (self::DenseResBlock)(in, scale, shift)
     x = swish.(x)
     x = self.chain[4](x)
     return x + self.shortcut(in)
-end
-
-struct Dense2D
-    dense::Dense
-end
-
-@functor Dense2D
-
-Dense2D(in, out, σ=identity; bias=true) = Dense2D(Dense(in, out, σ; bias = bias))
-
-function (self::Dense2D)(x)
-    d1, d2, B = size(x) #32, 512, batch_size
-    x = reshape(x, d2, d1 * B)
-    result = self.dense(x)
-    return reshape(result, d1, :, B)
 end
 
 struct NDBatchNorm

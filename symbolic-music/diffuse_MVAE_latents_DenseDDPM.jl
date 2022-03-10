@@ -8,6 +8,7 @@ using .DiffusionModels
 
 
 timesteps = 1000
+batch_size=64
 device = gpu
 
 
@@ -17,9 +18,10 @@ println("Model params: $(count_params(model))")
 betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
 diffusion = GaussianDiffusionModel(model, betas, timesteps, (32, 512), device)
 
-train_x, eval_set = get_dataset(;limit=10000)
+train_x, test_x = get_dataset(;limit=10000)
 
-train_loader = DataLoader(train_x, batchsize=64, shuffle=true)
+train_loader = DataLoader(train_x, batchsize=batch_size, shuffle=true)
+test_loader = DataLoader(test_x, batchsize=batch_size, shuffle=true)
 
-trainer = Trainer(diffusion, train_loader, 1e-3, 100)
-train(trainer; save_model=true)
+trainer = Trainer(diffusion, train_loader, 1e-3, 100, test_loader)
+train!(trainer; save_model=true)

@@ -1,41 +1,8 @@
 module UNet
-
+include("../nn_common.jl") 
 export Unet, Fake2DUnet, Fake1DUnet
-export SinusoidalPosEmb #todo: dbg exports
 using Flux
 using Flux: @functor
-
-expand_dims(x,n::Int) = reshape(x,ones(Int64,n)...,size(x)...)
-
-function squeeze(x) 
-    if size(x)[end] != 1
-        return dropdims(x, dims = tuple(findall(size(x) .== 1)...))
-    else
-        # For the case BATCH_SIZE = 1
-        int_val = dropdims(x, dims = tuple(findall(size(x) .== 1)...))
-        return reshape(int_val,size(int_val)...,1)
-    end
-end
-
-struct SinusoidalPosEmb
-    emb::AbstractArray{Float32}
-end
-
-@functor SinusoidalPosEmb
-
-SinusoidalPosEmb(dim::Int64) = SinusoidalPosEmb(ℯ .^ ((0:(dim÷2-1)) * -(log(10000) / (dim ÷ 2 - 1))))
-
-function (s::SinusoidalPosEmb)(x)
-    emb = x' .* s.emb
-    return cat(sin.(emb), cos.(emb), dims = 1)
-end
-
-
-function BatchNormWrap(out_ch)
-    Chain(x -> expand_dims(x, 2),
-        BatchNorm(out_ch),
-        x -> squeeze(x))
-end
 
 struct ConvBlock
     time_mlp
@@ -49,7 +16,7 @@ end
 ConvBlock(dim::Int, dim_out::Int, norm::Bool = true, time_emb_dim::Int = 64, mult::Int = 2) = ConvBlock(
     Chain(x -> gelu.(x), Dense(time_emb_dim, dim)),
     Conv((7, 7), dim => dim, pad = (3, 3), groups = dim),
-    Chain(norm ? BatchNormWrap(dim) : identity,
+    Chain(norm ? BatchNorm(dim) : identity,
         Conv((3, 3), dim => dim_out * mult, pad=(1, 1)), x -> gelu.(x),
         Conv((3, 3), dim_out * mult => dim_out, pad=(1, 1))),
     dim == dim_out ? identity : Conv((1, 1), dim => dim_out)
@@ -82,7 +49,7 @@ end
 function Unet(channels::Int = 1, out_dim::Int = channels, time_dim::Int = 64)
     down_blocks = Chain(Downsample(64))
 
-    conv_blocks = Chain(ConvBlock(1, 64, false), ConvBlock(64, 64), ConvBlock(64, 128), ConvBlock(128, 128), ConvBlock(128, 128), ConvBlock(128, 128),
+    conv_blocks = Chain(ConvBlock(1, 64, false), ConvBlock(64, 64), ConvBlock(64, 128), BatchNorm(128), SelfAttention(128), ConvBlock(128, 128), ConvBlock(128, 128), ConvBlock(128, 128),
                         ConvBlock(256, 64), ConvBlock(64, 64))
 
     up_blocks = Chain(Upsample(64))
@@ -106,14 +73,16 @@ function (u::Unet)(x::AbstractArray, t::AbstractArray)
     x = u.down_blocks[1](x)
 
     x = u.conv_blocks[3](x, t)
-    x = u.conv_blocks[4](x, t)
+    x = u.conv_blocks[4](x)
+    x = u.conv_blocks[5](x) + x
+    x = u.conv_blocks[6](x, t)
     h2 = x
 
-    x = u.conv_blocks[5](x, t)
-    x = u.conv_blocks[6](x, t)
-
-    x = u.conv_blocks[7](cat(x, h2, dims = 3), t)
+    x = u.conv_blocks[7](x, t)
     x = u.conv_blocks[8](x, t)
+
+    x = u.conv_blocks[9](cat(x, h2, dims = 3), t)
+    x = u.conv_blocks[10](x, t)
     x = u.up_blocks[1](x)
 
     return u.final_conv(x)
