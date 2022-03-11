@@ -11,12 +11,11 @@ timesteps = 1000
 batch_size=64
 device = gpu
 
-
 model = DenseDDPM(512) |> device
 
 println("Model params: $(count_params(model))")
 betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
-diffusion = GaussianDiffusionModel(model, betas, timesteps, (32, 512), device)
+diffusion = GaussianDiffusionModel(model, betas, timesteps, (512, 32), device)
 
 train_x, test_x = get_dataset(;limit=10000)
 

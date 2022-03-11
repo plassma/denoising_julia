@@ -19,8 +19,7 @@ ConvBlock(dim::Int, dim_out::Int, norm::Bool = true, time_emb_dim::Int = 64, mul
     Chain(norm ? BatchNorm(dim) : identity,
         Conv((3, 3), dim => dim_out * mult, pad=(1, 1)), x -> gelu.(x),
         Conv((3, 3), dim_out * mult => dim_out, pad=(1, 1))),
-    dim == dim_out ? identity : Conv((1, 1), dim => dim_out)
-    )  
+    dim == dim_out ? identity : Conv((1, 1), dim => dim_out))
 
 function (u::ConvBlock)(x, t = nothing)
     h = u.ds_conv(x)
@@ -30,7 +29,7 @@ function (u::ConvBlock)(x, t = nothing)
         h = h .+ resh
     end
     h = u.chain(h)
-    return h + u.res_conv(x)
+    h + u.res_conv(x)
 end
 
 Upsample(dim) = ConvTranspose((4, 4), dim => dim, stride=(2, 2), pad=(1, 1))
@@ -49,7 +48,7 @@ end
 function Unet(channels::Int = 1, out_dim::Int = channels, time_dim::Int = 64)
     down_blocks = Chain(Downsample(64))
 
-    conv_blocks = Chain(ConvBlock(1, 64, false), ConvBlock(64, 64), ConvBlock(64, 128), BatchNorm(128), SelfAttention(128), ConvBlock(128, 128), ConvBlock(128, 128), ConvBlock(128, 128),
+    conv_blocks = Chain(ConvBlock(1, 64, false), ConvBlock(64, 64), ConvBlock(64, 128), BatchNorm(128), SelfAttention(196, 4), ConvBlock(128, 128), ConvBlock(128, 128), ConvBlock(128, 128),
                         ConvBlock(256, 64), ConvBlock(64, 64))
 
     up_blocks = Chain(Upsample(64))
@@ -85,7 +84,7 @@ function (u::Unet)(x::AbstractArray, t::AbstractArray)
     x = u.conv_blocks[10](x, t)
     x = u.up_blocks[1](x)
 
-    return u.final_conv(x)
+    u.final_conv(x)
   end
 
 
@@ -102,7 +101,7 @@ function (f::Fake2DUnet)(x::AbstractArray, t::AbstractArray)
     shape = size(x)
     x = reshape(x, (f.dim, f.dim, size(x)[2:end]...))
     x = f.unet(x, t)
-    return reshape(x, shape)
+    reshape(x, shape)
 end
 
 
@@ -119,8 +118,7 @@ function (f::Fake1DUnet)(x::AbstractArray, t::AbstractArray)
     shape = size(x)
     x = reshape(x, (f.dim, f.dim, 1, size(x)[2:end]...))
     x = f.unet(x, t)
-    return reshape(x, shape)
+    reshape(x, shape)
 end
-
 
 end #module

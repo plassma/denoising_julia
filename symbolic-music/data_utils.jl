@@ -13,7 +13,7 @@ function to_vector(X, limit=nothing)
             break
         end
     end
-    permutedims(batch(result), [2, 1, 3])
+    batch(result)
 end
 
 function normalize!(x)

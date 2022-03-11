@@ -8,12 +8,13 @@ using .DiffusionModels
 using .UNet
 using Random
 using Images
+using Plots
 
 pyplot()
 Plots.PyPlotBackend()
 
 global epoch = 1
-function save_samples(samples)
+function save_samples(samples, save_path="")
     samples = (reshape(samples, 28, 28, size(samples)[end]) .+ 1) ./ 2
 
     a = zeros(28*4, 28*4)
@@ -26,7 +27,7 @@ function save_samples(samples)
         end
     end
 
-    save("$epoch.png", colorview(Gray, a))
+    save("$save_path$epoch.png", colorview(Gray, a))
     global epoch += 1
 end
 

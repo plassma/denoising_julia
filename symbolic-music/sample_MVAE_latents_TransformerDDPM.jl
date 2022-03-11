@@ -12,7 +12,7 @@ device = gpu
 num_samples = remaining = 100
 batch_size = 64
 
-@load "results/diffusion_model_0034.bson" model
+@load "results/dm_transformer.bson" model
 model = model |> device
 samples = Array{Float32, 3}(undef, model.data_shape..., num_samples)
 
