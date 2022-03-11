@@ -1,13 +1,7 @@
-using Flux
+using Flux, Flux.Optimise, Zygote, CUDA
 using Flux.Data: DataLoader
-using Flux.Optimise
-using Zygote
-using Statistics
-using ProgressBars
-using CUDA
-using Printf
+using Dates, Plots, Printf, ProgressBars, Statistics
 using BSON: @save
-using Dates
 
 
 struct Trainer
@@ -30,15 +24,13 @@ function plot_losses(train_losses, test_losses, path)
 end
 
 function loss_increased_for_n_epochs(test_losses, n = 2)
-    n+=1
-    if length(test_losses) >= n
+    if length(test_losses) > n
         stop=true
-        for i = 1:n-1
-            stop &= test_losses[end - i] < test_losses[end - i + 1]
+        for i = 1:n
+            stop &= test_losses[end - n] < test_losses[end - i + 1]
         end
         return stop
     end
-
     false
 end
 
