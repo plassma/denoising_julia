@@ -1,6 +1,6 @@
 using TFRecord
 using Flux: batch
-using BSON: @save
+using BSON: @save, @load
 include("../utils.jl")
 
 searchdir(path,key) = filter(x->contains(x,key), readdir(path))
@@ -30,7 +30,7 @@ function normalize!(x)
 end
 
 function abnormalize!(x)
-    @load "min_max.bson" train_min, train_max
+    @load "min_max.bson" x_min x_max
     x .+=1
     x ./= 2
     x .*= (x_max - x_min)
@@ -44,9 +44,9 @@ function get_dataset(path= "/media/matthias/Data/preprocessed_clean_encoded/"; n
     test_x = to_vector(test_ds, limit)
     
     if normalize
-        train_min, train_max = normalize!(train_x)
+        x_min, x_max = normalize!(train_x)
         normalize!(test_x)
-        @save "min_max.bson" train_min, train_max
+        @save "min_max.bson" x_min x_max
     end
     println("Loaded data. |train| = $(size(train_x)[end]), |test| = $(size(test_x)[end])")
     train_x, test_x
