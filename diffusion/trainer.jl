@@ -42,7 +42,7 @@ function loss_increased_for_n_epochs(test_losses, n = 2)
     false
 end
 
-function train!(trainer::Trainer; save_model=true, handle_samples=nothingk, early_stopping_criterion=loss_increased_for_n_epochs)
+function train!(trainer::Trainer; save_model=true, handle_samples=nothing, early_stopping_criterion=loss_increased_for_n_epochs)
 
     save_path = "results/$(DateTime(now()))/"
     mkpath(save_path)
