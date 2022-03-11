@@ -36,7 +36,7 @@ device = gpu
 
 unet = Fake1DUnet(28) |> device
 
-betas = make_beta_schedule(timesteps) |> device
+betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
 diffusion = GaussianDiffusionModel(unet, betas, timesteps, (28*28), device)
 
 train_x, _ = MNIST.traindata(Float32)
@@ -47,5 +47,5 @@ train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
 test_loader = DataLoader(test_x, batchsize=32, shuffle=true)
 
 
-trainer = Trainer(diffusion, train_loader, 1e-3, 100, test_loader)
+trainer = Trainer(diffusion, train_loader, 1e-3, 10, test_loader)
 train!(trainer; handle_samples=save_samples)

@@ -1,6 +1,6 @@
 module DiffusionModels
 
-export GaussianDiffusionModel, make_beta_schedule, noise_like, sample, Trainer, train!
+export GaussianDiffusionModel, sample, Trainer, train!, loss_increased_for_n_epochs
 
 include("gaussian_diffusion_model.jl")
 include("trainer.jl")

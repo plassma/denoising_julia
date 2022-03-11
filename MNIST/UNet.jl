@@ -87,38 +87,4 @@ function (u::Unet)(x::AbstractArray, t::AbstractArray)
     u.final_conv(x)
   end
 
-
-struct Fake2DUnet
-    unet::Unet
-    dim
-end
-
-@functor Fake2DUnet
-
-Fake2DUnet(dim) = Fake2DUnet(Unet(), dim)
-
-function (f::Fake2DUnet)(x::AbstractArray, t::AbstractArray)
-    shape = size(x)
-    x = reshape(x, (f.dim, f.dim, size(x)[2:end]...))
-    x = f.unet(x, t)
-    reshape(x, shape)
-end
-
-
-struct Fake1DUnet
-    unet::Unet
-    dim
-end
-
-@functor Fake1DUnet
-
-Fake1DUnet(dim) = Fake1DUnet(Unet(), dim)
-
-function (f::Fake1DUnet)(x::AbstractArray, t::AbstractArray)
-    shape = size(x)
-    x = reshape(x, (f.dim, f.dim, 1, size(x)[2:end]...))
-    x = f.unet(x, t)
-    reshape(x, shape)
-end
-
 end #module

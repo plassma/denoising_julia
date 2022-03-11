@@ -19,7 +19,30 @@ struct Trainer
     test_dataloader
 end
 
-function train!(trainer::Trainer; save_model=true, handle_samples=nothing)
+function plot_losses(train_losses, test_losses, path)
+    p = plot(train_losses, title="Diffusion Model training", label="train loss", xlabel="Epoch", ylabel="Mean Squared Error")
+
+    if length(test_losses) == length(test_losses)
+        plot!(test_losses, label="test loss")
+    end
+    display(p)
+    savefig(p, path)
+end
+
+function loss_increased_for_n_epochs(test_losses, n = 2)
+    n+=1
+    if length(test_losses) >= n
+        stop=true
+        for i = 1:n-1
+            stop &= test_losses[end - i] < test_losses[end - i + 1]
+        end
+        return stop
+    end
+
+    false
+end
+
+function train!(trainer::Trainer; save_model=true, handle_samples=nothingk, early_stopping_criterion=loss_increased_for_n_epochs)
 
     save_path = "results/$(DateTime(now()))/"
     mkpath(save_path)
@@ -72,6 +95,12 @@ function train!(trainer::Trainer; save_model=true, handle_samples=nothing)
             model = trainer.diffusion_model |> cpu
             path = save_path * "diffusion_model_" * string(@sprintf("%04d", epoch)) * ".bson"
             @save path model
-        end     
+        end
+
+        if early_stopping_criterion(test_losses)
+            println("Early stopping criterion met!")
+            break
+        end
     end
+    plot_losses(train_losses, test_losses, save_path)
 end

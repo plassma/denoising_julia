@@ -7,35 +7,8 @@ function dbg_dump_var(var, name)
     println("$name: ($(typeof(var))) [$(size(var))]")
 end
 
-function make_beta_schedule(n_timestep, s = 0.008)
-    n_timestep +=1
-    x = range(0, n_timestep, n_timestep)
-    alphas_cumprod = cos.(((x ./ n_timestep) .+ s) ./ (1 .+ s) .* pi .* 0.5) .^ 2
-    alphas_cumprod ./= alphas_cumprod[1]
-    betas = 1 .- (alphas_cumprod[2:end] ./ alphas_cumprod[1:end - 1])
-    return clamp.(betas, 0, 0.999)
-end
-
 function extract(input, t, shape)
     return reshape(input[t], (repeat([1], length(shape) - 1)..., :))
-end
-
-approx_standard_normal_cdf(x) = 0.5 .* (1.0 .+ tanh.(sqrt(2.0 / pi) .* (x .+ 0.044715 .* x.^3)))
-
-function discretized_gaussian_log_likelihood(x, means, log_scales)
-    centered_x = x - means
-    inv_stdv = ℯ.^-log_scales
-    plus_in = inv_stdv .* (centered_x .+ 1 / 255)
-    cdf_plus = approx_standard_normal_cdf(plus_in)
-    min_in = inv_stdv * (centered_x .+ 1 / 255)
-    cdf_min = approx_standard_normal_cdf(min_in)
-
-    log_cdf_plus = log.(clamp.(cdf_plus, 1e-12))
-    log_one_minus_cdf_min = log.(clamp(1 .- cdf_min, 1e-12))
-    cdf_delta = cdf_plus - cdf_min
-    log_probs = ifelse.(x .< -0.999, log_cdf_plus, ifelse.(x .> 0.999, log_one_minus_cdf_min,
-                                                log(clamp(cdf_delta, 1e-12))))
-    return log_probs
 end
 
 struct GaussianDiffusionModel
