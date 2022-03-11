@@ -10,9 +10,6 @@ using Random
 using Images
 using Plots
 
-pyplot()
-Plots.PyPlotBackend()
-
 global epoch = 1
 function save_samples(samples, save_path="")
     samples = (reshape(samples, 28, 28, size(samples)[end]) .+ 1) ./ 2
@@ -34,18 +31,17 @@ end
 timesteps = 1000
 device = gpu
 
-unet = Fake1DUnet(28) |> device
+unet = Unet() |> device
 
 betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
-diffusion = GaussianDiffusionModel(unet, betas, timesteps, (28*28), device)
+diffusion = GaussianDiffusionModel(unet, betas, timesteps, (28, 28, 1), device)
 
 train_x, _ = MNIST.traindata(Float32)
 test_x, _ = MNIST.testdata(Float32)
-train_x = 2f0 * reshape(train_x, 784, :) .- 1f0 |> device
-test_x = 2f0 * reshape(test_x, 784, :) .- 1f0 |> device
+train_x = 2f0 * reshape(train_x, 28, 28, 1, :) .- 1f0 |> device
+test_x = 2f0 * reshape(test_x, 28, 28, 1, :) .- 1f0 |> device
 train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
 test_loader = DataLoader(test_x, batchsize=32, shuffle=true)
 
-
-trainer = Trainer(diffusion, train_loader, 1e-3, 10, test_loader)
+trainer = Trainer(diffusion, train_loader, 1e-3, 3, test_loader)
 train!(trainer; handle_samples=save_samples)

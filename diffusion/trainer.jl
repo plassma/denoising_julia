@@ -20,7 +20,7 @@ function plot_losses(train_losses, test_losses, path)
         plot!(test_losses, label="test loss")
     end
     display(p)
-    savefig(p, path)
+    savefig(p, "$path/training.png")
 end
 
 function loss_increased_for_n_epochs(test_losses, n = 2)
