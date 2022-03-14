@@ -43,5 +43,5 @@ test_x = 2f0 * reshape(test_x, 28, 28, 1, :) .- 1f0 |> device
 train_loader = DataLoader(train_x, batchsize=32, shuffle=true)
 test_loader = DataLoader(test_x, batchsize=32, shuffle=true)
 
-trainer = Trainer(diffusion, train_loader, 1e-3, 3, test_loader)
+trainer = Trainer(diffusion, train_loader, test_loader, 1e-3, 10)
 train!(trainer; handle_samples=save_samples)

@@ -16,7 +16,7 @@ struct GaussianDiffusionModel
     data_shape
 
     device
-    denoise_fn #todo: type this
+    denoise_fn
 
     betas::Array{Float32, 1}
     alphas_cumprod::Array{Float32, 1}
@@ -120,29 +120,12 @@ function sample(gdm::GaussianDiffusionModel, batch_size=16)
     return p_sample_loop(gdm, (gdm.data_shape..., batch_size))
 end
 
-function interpolate(gdm::GaussianDiffusionModel, x1, x2, t=nothing, lam=0.5)
-    if isnothing(t)
-        t = gdm.num_timesteps -1
-    end
-
-    t_batched = fill(t, size(x1, 1))
-    f(x) = q_sample(gdm, x, t_batched)
-    xt1, xt2 = map(f, (x1, x2))
-
-    img = (1 - lam) * xt1 + lam * xt2
-
-    for i = gdm.num_timesteps-1:-1:0
-        img = p_sample(gdm, img, fill(i, size(x1, 1)), true)
-    end
-
-end
-
 function q_sample(gdm::GaussianDiffusionModel, x_start, t, noise=nothing)
     if isnothing(noise)
         noise = randn(Float32, size(x_start)) |> gdm.device
     end
 
-    return extract(gdm.sqrt_alphas_cumprod, t, size(x_start)) .* x_start .+ #todo: remove all unecessary broadcasting operators
+    return extract(gdm.sqrt_alphas_cumprod, t, size(x_start)) .* x_start .+
            extract(gdm.sqrt_one_minus_alphas_cumprod, t, size(x_start)) .* noise
 end
 
@@ -155,7 +138,7 @@ function p_lossess(gdm::GaussianDiffusionModel, x_start, t, noise=nothing)
     x_noisy = q_sample(gdm, x_start, t, noise)
     x_recon = gdm.denoise_fn(x_noisy, t)
 
-    loss = mean((noise - x_recon).^2) #todo: loss types?
+    loss = mean((noise - x_recon).^2)
 
     return loss
 end

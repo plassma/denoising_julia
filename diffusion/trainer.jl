@@ -5,12 +5,11 @@ using BSON: @save
 
 
 struct Trainer
-    diffusion_model#::GaussianDiffusionModel
-    dataloader#::DataLoader
-
-    train_lr#::Float64
-    epochs#::Int64
-    test_dataloader
+    diffusion_model::GaussianDiffusionModel
+    dataloader::DataLoader
+    test_dataloader::DataLoader
+    train_lr::Float64
+    epochs::Int64
 end
 
 function plot_losses(train_losses, test_losses, path)
@@ -53,7 +52,7 @@ function train!(trainer::Trainer; save_model=true, handle_samples=nothing, early
         for x in iter
             params = Flux.params(trainer.diffusion_model.denoise_fn)
             loss, back = Zygote.pullback(params) do
-                loss = move_x ? trainer.diffusion_model(x |> trainer.diffusion_model.device) : trainer.diffusion_model(x)# todo: moving the data anywhere in the controlflow seems to create a copy slowing down the training by 50%. This is not elegant, but works
+                loss = move_x ? trainer.diffusion_model(x |> trainer.diffusion_model.device) : trainer.diffusion_model(x)
             end
             grads = back(1.0f0)
             Flux.update!(opt, params, grads)

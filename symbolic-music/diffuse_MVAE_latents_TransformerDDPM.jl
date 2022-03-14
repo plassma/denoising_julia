@@ -22,5 +22,5 @@ train_x, test_x = get_dataset(;limit=10000)
 train_loader = DataLoader(train_x, batchsize=batch_size, shuffle=true)
 test_loader = DataLoader(test_x, batchsize=batch_size, shuffle=true)
 
-trainer = Trainer(diffusion, train_loader, 1e-3, 100, test_loader)
+trainer = Trainer(diffusion, train_loader, test_loader, 1e-3, 100)
 train!(trainer; save_model=true)
