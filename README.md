@@ -8,10 +8,10 @@ Unlike the latter two, DDPMs do not generate a sample in one forward pass, but r
 Each refinement step can be interpreted as subtracting a small amount of gaussian noise.
 The gaussian noise that should be subtracted can be learned by starting with data from the desired distribution, iteratively applying gaussian noise (diffusion steps), and training a neural network on the inversion of that process.
 
-Each step in the forward diffusion process, a small amount of gaussian noise is added to the latent vector <img src="https://render.githubusercontent.com/render/math?math=x_{t-1}"> resulting in the next latent vector $x_t$: 
-	$$`x_t = \sqrt{1 - \beta_t}x_{t-1} + \sqrt{\beta_t}\mathcal{N}(0, I)`$$
-or written as Markov transition probability: 
-	$$q(x_t\mid x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t}x_{t-1}, \beta_t I)$$
+Each step in the forward diffusion process, a small amount of gaussian noise is added to the latent vector <img src="https://render.githubusercontent.com/render/math?math=x_{t-1}"> resulting in the next latent vector <img src="https://render.githubusercontent.com/render/math?math=x_t">:
+	<img src="https://render.githubusercontent.com/render/math?math=x_t = \sqrt{1 - \beta_t}x_{t-1} + \sqrt{\beta_t}\mathcal{N}(0, I)">
+or written as Markov transition probability:
+	<img src="https://render.githubusercontent.com/render/math?math=q(x_t\mid x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t}x_{t-1}, \beta_t I)">
 $\beta_t$ is a scalar coefficient that determines the proportion of $x_t$ that is replaced by random noise. Usually a noisier sample allows for a larger update (constrained by the reverse diffusion process), so that $0 < \beta_t < \beta_{t+1} < 1$.
 Although the $\beta_t$s and $\sigma_t$s could be trainable parameters, they can be set to fixed constants in practice.
 The reverse diffusion process can be formulated as:
