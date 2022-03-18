@@ -4,11 +4,11 @@ The application of DDPMs to the domain of Symbolic Music Generation is based on 
 This README will provide a short summary of the theoretical background of DDPMs, and as well as instructions on how to use this implementation.
 ## Theoretical Background
 DDPMs are generative models that in 2020 were shown to be able to outperform other types of generative models such as GANs or VAEs in some image generation problems.
-Unlike the latter two, DDPMs do not generate a sample in one forward pass, but rather in $`T`$ refinement steps.
+Unlike the latter two, DDPMs do not generate a sample in one forward pass, but rather in <img src="https://render.githubusercontent.com/render/math?math=T"> refinement steps.
 Each refinement step can be interpreted as subtracting a small amount of gaussian noise.
 The gaussian noise that should be subtracted can be learned by starting with data from the desired distribution, iteratively applying gaussian noise (diffusion steps), and training a neural network on the inversion of that process.
 
-Each step in the forward diffusion process, a small amount of gaussian noise is added to the latent vector $x_{t-1}$ resulting in the next latent vector $x_t$: 
+Each step in the forward diffusion process, a small amount of gaussian noise is added to the latent vector <img src="https://render.githubusercontent.com/render/math?math=x_{t-1}"> resulting in the next latent vector $x_t$: 
 	$$`x_t = \sqrt{1 - \beta_t}x_{t-1} + \sqrt{\beta_t}\mathcal{N}(0, I)`$$
 or written as Markov transition probability: 
 	$$q(x_t\mid x_{t-1}) = \mathcal{N}(x_t; \sqrt{1 - \beta_t}x_{t-1}, \beta_t I)$$
