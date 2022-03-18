@@ -33,8 +33,8 @@ device = gpu
 
 unet = Unet() |> device
 
-betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
-diffusion = GaussianDiffusionModel(unet, betas, timesteps, (28, 28, 1), device)
+betas = collect(LinRange(1e-6, 1e-2, timesteps)) |> device
+diffusion = GaussianDiffusionModel(unet, betas, (28, 28, 1), device)
 
 train_x, _ = MNIST.traindata(Float32)
 test_x, _ = MNIST.testdata(Float32)

@@ -14,8 +14,8 @@ batch_size=64
 model = TransformerDDPM() |> device
 
 println("Model params: $(count_params(model))")
-betas = collect(LinRange(1e-6, 1e-2, 1000)) |> device
-diffusion = GaussianDiffusionModel(model, betas, timesteps, (512, 32), device)
+betas = collect(LinRange(1e-6, 1e-2, timesteps)) |> device
+diffusion = GaussianDiffusionModel(model, betas, (512, 32), device)
 
 train_x, test_x = get_dataset(;limit=10000)
 

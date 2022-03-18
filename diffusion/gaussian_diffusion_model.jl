@@ -20,7 +20,6 @@ struct GaussianDiffusionModel
 
     sqrt_alphas_cumprod::AbstractArray{Float32, 1}
     sqrt_one_minus_alphas_cumprod::AbstractArray{Float32, 1}
-    log_one_minus_alphas_cumprod::AbstractArray{Float32, 1}
     sqrt_recip_alphas_cumprod::AbstractArray{Float32, 1}
     sqrt_recipm1_alphas_cumprod::AbstractArray{Float32, 1}
     posterior_variance::AbstractArray{Float32, 1}
@@ -28,21 +27,19 @@ struct GaussianDiffusionModel
     posterior_mean_coef1::AbstractArray{Float32, 1}
     posterior_mean_coef2::AbstractArray{Float32, 1}
 
-    GaussianDiffusionModel(model, betas, num_timesteps, image_size, device = gpu) = gaussian_diffusion_model(model, betas, num_timesteps, image_size, device)
+    GaussianDiffusionModel(model, betas, data_shape, device = gpu) = gaussian_diffusion_model(model, betas, data_shape, device)
     GaussianDiffusionModel(args...) = new(args...)
-
 end
 
 @functor GaussianDiffusionModel
 
-function gaussian_diffusion_model(model, betas, num_timesteps, data_shape, device)
+function gaussian_diffusion_model(model, betas, data_shape, device)
     alphas = 1 .- betas
     alphas_cumprod = cumprod(alphas)
     alphas_cumprod_prev = [1, (alphas_cumprod[1:end - 1] |> cpu)...] |> device#need to move to cpu as scalar indexing is not supported on gpu
 
     sqrt_alphas_cumprod = sqrt.(alphas_cumprod)
     sqrt_one_minus_alphas_cumprod = sqrt.(1 .- alphas_cumprod)
-    log_one_minus_alphas_cumprod = log.(1 .- alphas_cumprod)
     sqrt_recip_alphas_cumprod = 1 ./ sqrt.(alphas_cumprod)
     sqrt_recipm1_alphas_cumprod = sqrt.(1 ./ alphas_cumprod .- 1)
 
@@ -52,19 +49,11 @@ function gaussian_diffusion_model(model, betas, num_timesteps, data_shape, devic
     posterior_mean_coef1 = betas .* sqrt.(alphas_cumprod_prev) ./ (1 .- alphas_cumprod)
     posterior_mean_coef2 = (1 .- alphas_cumprod_prev) .* sqrt.(alphas) ./ (1 .- alphas_cumprod)
 
-    GaussianDiffusionModel(num_timesteps, data_shape, device, model, betas, alphas_cumprod, alphas_cumprod_prev,
-    sqrt_alphas_cumprod, sqrt_one_minus_alphas_cumprod, log_one_minus_alphas_cumprod,
+    GaussianDiffusionModel(length(betas), data_shape, device, model, betas, alphas_cumprod, alphas_cumprod_prev,
+    sqrt_alphas_cumprod, sqrt_one_minus_alphas_cumprod,
     sqrt_recip_alphas_cumprod, sqrt_recipm1_alphas_cumprod,
     posterior_variance, posterior_log_variance_clipped, posterior_mean_coef1,
     posterior_mean_coef2)
-end
-
-function q_mean_variance(gdm::GaussianDiffusionModel, x_0, t)
-    mean = extract(gdm.sqrt_alphas_cumprod, t, size(x_0)) .* x_0
-    variance = extract(1 .- gdm.alphas_cumprod, t, size(x_0))
-    log_variance = extract(gdm.log_one_minus_alphas_cumprod, t, size(x_0))
-
-    mean, variance, log_variance
 end
 
 function predict_start_from_noise(gdm::GaussianDiffusionModel, x_t, t, noise)
